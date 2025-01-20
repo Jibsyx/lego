@@ -157,3 +157,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   setCurrentDeals(deals);
   render(currentDeals, currentPagination);
 });
+
+// Fetch deals from api
+
+
+// Event listener to update deals when page is changed FEATURE 1
+selectPage.addEventListener('change', async (event) => {
+  const page = parseInt(event.target.value); // Selected page
+  const size = parseInt(selectShow.value) || 6; // Current page size
+
+  // Fetch and render deals for the selected page
+  const deals = await fetchDeals(page, size);
+  setCurrentDeals(deals);
+  render(currentDeals, currentPagination);
+});
+
+// Event listener for filtering by best discount FEATURE 2
+filterDiscount.addEventListener('change', async (event) => {
+  const page = currentPagination.currentPage || 1;
+  const size = parseInt(selectShow.value) || 6;
+
+  const deals = await fetchDeals(page, size, event.target.checked ? 50 : null);
+  setCurrentDeals(deals);
+  render(currentDeals, currentPagination);
+});
+
