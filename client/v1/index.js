@@ -40,7 +40,11 @@ for (let i = 1; i<deals.length;i++){
   }
 
 }
+<<<<<<< HEAD
 console.log(BestDeal);
+=======
+console.log('Best deal',BestDeal);
+>>>>>>> 9df62d63c7892aef8f1beeb214d5d70b4760277a
 
 /**
  * 🧱
