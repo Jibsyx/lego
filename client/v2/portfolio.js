@@ -245,6 +245,34 @@ selectSort.addEventListener('change', async (event) => {
     selectSort.dispatchEvent(event); // re-triggers the sort listener
   });
 });
+const renderSales = (sales) => {
+  const section = document.querySelector('#sales');
+  section.innerHTML = '<h2>Sales on Vinted</h2>';
+
+  if (sales.length === 0) {
+    section.innerHTML += '<p>No sales found for this set.</p>';
+    return;
+  }
+
+  sales.forEach(sale => {
+    const date = new Date(sale.published * 1000).toLocaleDateString();
+    section.innerHTML += `
+      <div class="sale">
+        <span>${sale.price} €</span>
+        <span>Published: ${date}</span>
+        <a href="${sale.link}" target="_blank">View</a>
+      </div>
+    `;
+  });
+};
+selectLegoSetIds.addEventListener('change', (event) => {
+  const selectedId = event.target.value;
+
+  const sales = currentDeals.filter(deal => deal.id === selectedId);
+  renderSales(sales);
+});
+
+
 
 
 
