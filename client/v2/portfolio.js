@@ -97,6 +97,9 @@ const renderDeals = deals => {
       <div class="deal" id=${deal.uuid}>
         <span>${deal.id}</span>
         <a href="${deal.link}" target="_blank">${deal.title}</a>
+        <button class="favorite-btn" data-id="${deal.uuid}">
+        ⭐️
+        </button>
         <span>${deal.price} €</span>
         <span class="publish-date">Published: ${publishDate}</span>
       </div>
@@ -109,6 +112,33 @@ const renderDeals = deals => {
   fragment.appendChild(div);
   sectionDeals.innerHTML = '<h2>Deals</h2>';
   sectionDeals.appendChild(fragment);
+  // Load favorites from localStorage
+const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+
+// Add event listeners to favorite buttons
+document.querySelectorAll('.favorite-btn').forEach(btn => {
+  const id = btn.getAttribute('data-id');
+
+  // Fill star if it's already a favorite
+  if (favorites.includes(id)) {
+    btn.textContent = '⭐️ (saved)';
+  }
+
+  btn.addEventListener('click', () => {
+    let updatedFavorites = [...favorites];
+
+    if (favorites.includes(id)) {
+      updatedFavorites = favorites.filter(fav => fav !== id);
+      btn.textContent = '⭐️';
+    } else {
+      updatedFavorites.push(id);
+      btn.textContent = '⭐️ (saved)';
+    }
+
+    localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+  });
+});
+
 };
 
 /**
