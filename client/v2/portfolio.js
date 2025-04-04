@@ -1,6 +1,14 @@
 // Invoking strict mode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode#invoking_strict_mode
 'use strict';
 const selectSort = document.querySelector('#sort-select');
+const inputMinDiscount = document.querySelector('#min-discount');
+const inputMinComments = document.querySelector('#min-comments');
+const inputMinTemperature = document.querySelector('#min-temperature');
+
+const boxDiscount = document.querySelector('#discount-threshold');
+const boxComments = document.querySelector('#comments-threshold');
+const boxTemperature = document.querySelector('#temperature-threshold');
+
 
 
 /**
@@ -184,18 +192,41 @@ selectSort.addEventListener('change', async (event) => {
   const page = currentPagination.currentPage || 1;
   const size = parseInt(selectShow.value) || 6;
 
-  const { result, meta } = await fetchDeals(page, size);
+  // Show only relevant input box
+  boxDiscount.style.display = sort === 'discount-desc' ? 'block' : 'none';
+  boxComments.style.display = sort === 'comments-desc' ? 'block' : 'none';
+  boxTemperature.style.display = sort === 'temperature-desc' ? 'block' : 'none';
 
+  const { result, meta } = await fetchDeals(page, size);
   let sortedResult = result;
 
   if (sort === 'discount-desc') {
-    sortedResult = [...result].sort((a, b) => (b.discount || 0) - (a.discount || 0));
+    const minDiscount = parseInt(inputMinDiscount.value) || 0;
+    sortedResult = [...result]
+      .filter(deal => (deal.discount || 0) >= minDiscount)
+      .sort((a, b) => (b.discount || 0) - (a.discount || 0));
   } else if (sort === 'comments-desc') {
-    sortedResult = [...result].sort((a, b) => (b.comments || 0) - (a.comments || 0));
+    const minComments = parseInt(inputMinComments.value) || 0;
+    sortedResult = [...result]
+      .filter(deal => (deal.comments || 0) >= minComments)
+      .sort((a, b) => (b.comments || 0) - (a.comments || 0));
+  } else if (sort === 'temperature-desc') {
+    const minTemp = parseFloat(inputMinTemperature.value) || 0;
+    sortedResult = [...result]
+      .filter(deal => (deal.temperature || 0) >= minTemp)
+      .sort((a, b) => b.temperature - a.temperature);
   }
+  
 
   setCurrentDeals({ result: sortedResult, meta });
   render(currentDeals, currentPagination);
 });
+[inputMinDiscount, inputMinComments, inputMinTemperature].forEach(input => {
+  input.addEventListener('input', () => {
+    const event = new Event('change');
+    selectSort.dispatchEvent(event); // re-triggers the sort listener
+  });
+});
+
 
 

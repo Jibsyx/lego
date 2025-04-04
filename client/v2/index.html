@@ -19,13 +19,7 @@
         <label for="page-select">Go to page:</label>
         <select name="page" id="page-select"> </select>
       </div>
-      <div id="filters">
-        <label>
-          <input type="checkbox" id="filter-hot" />
-          By hot deals
-        </label>
-      </div>
-      
+            
       <div id="sort">
         <label for="sort-select">Sort:</label>
         <select name="sort" id="sort-select">
@@ -35,8 +29,24 @@
           <option value="date-desc">Anciently published</option>
           <option value="discount-desc">Best discount</option>
           <option value="comments-desc">Most commented</option>
+          <option value="temperature-desc">Hot deals</option>
         </select>
       </div>
+      <div id="thresholds">
+        <div id="discount-threshold" style="display: none;">
+          <label for="min-discount">Min discount:</label>
+          <input type="number" id="min-discount" value="50" min="0" max="100" />
+        </div>
+        <div id="comments-threshold" style="display: none;">
+          <label for="min-comments">Min comments:</label>
+          <input type="number" id="min-comments" value="15" min="0" />
+        </div>
+        <div id="temperature-threshold" style="display: none;">
+          <label for="min-temperature">Min temperature:</label>
+          <input type="number" id="min-temperature" value="100" min="0" />
+        </div>
+      </div>
+      
     </section>
     <section id="lego">
       <h2>Lego sets</h2>
