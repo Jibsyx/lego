@@ -8,6 +8,8 @@ const inputMinTemperature = document.querySelector('#min-temperature');
 const boxDiscount = document.querySelector('#discount-threshold');
 const boxComments = document.querySelector('#comments-threshold');
 const boxTemperature = document.querySelector('#temperature-threshold');
+document.querySelector('#nbSales').textContent = 0;
+
 
 
 
@@ -246,8 +248,12 @@ selectSort.addEventListener('change', async (event) => {
   });
 });
 const renderSales = (sales) => {
+  document.querySelector('#nbSales').textContent = sales.length;
+
   const section = document.querySelector('#sales');
   section.innerHTML = '<h2>Sales on Vinted</h2>';
+  document.querySelector('#nbSales').textContent = sales.length;
+
 
   if (sales.length === 0) {
     section.innerHTML += '<p>No sales found for this set.</p>';
@@ -265,12 +271,17 @@ const renderSales = (sales) => {
     `;
   });
 };
+
 selectLegoSetIds.addEventListener('change', (event) => {
   const selectedId = event.target.value;
 
-  const sales = currentDeals.filter(deal => deal.id === selectedId);
+  // Ensure we are comparing strings
+  const sales = currentDeals.filter(deal => String(deal.id) === String(selectedId));
+
+  console.log("Filtered sales:", sales); // ✅ Temporary debug
   renderSales(sales);
 });
+
 
 
 
