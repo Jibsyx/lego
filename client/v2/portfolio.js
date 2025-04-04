@@ -89,16 +89,19 @@ const renderDeals = deals => {
   const fragment = document.createDocumentFragment();
   const div = document.createElement('div');
   const template = deals
-    .map(deal => {
-      return `
+  .map(deal => {
+    const publishDate = new Date(deal.published * 1000).toLocaleDateString();
+    return `
       <div class="deal" id=${deal.uuid}>
         <span>${deal.id}</span>
         <a href="${deal.link}">${deal.title}</a>
-        <span>${deal.price}</span>
+        <span>${deal.price} €</span>
+        <span class="publish-date">Published: ${publishDate}</span>
       </div>
     `;
-    })
-    .join('');
+  })
+  .join('');
+
 
   div.innerHTML = template;
   fragment.appendChild(div);
@@ -188,6 +191,9 @@ selectPage.addEventListener('change', async (event) => {
 
 // Event listener for filtering by best discount FEATURE 2
 selectSort.addEventListener('change', async (event) => {
+  console.log(currentDeals.map(deal => new Date(deal.published * 1000).toLocaleString()));
+
+
   const sort = event.target.value;
   const page = currentPagination.currentPage || 1;
   const size = parseInt(selectShow.value) || 6;
@@ -220,6 +226,14 @@ selectSort.addEventListener('change', async (event) => {
   } else if (sort === 'price-desc') {
     sortedResult = [...result].sort((a, b) => (b.price || 0) - (a.price || 0));
   }
+  else if (sort === 'date-asc') {
+    // Newest first = highest published timestamp
+    sortedResult = [...result].sort((a, b) => b.published - a.published);
+  } else if (sort === 'date-desc') {
+    // Oldest first = lowest published timestamp
+    sortedResult = [...result].sort((a, b) => a.published - b.published);
+  }
+  
 
   setCurrentDeals({ result: sortedResult, meta });
   render(currentDeals, currentPagination);
