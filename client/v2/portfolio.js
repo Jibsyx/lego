@@ -1,5 +1,7 @@
 // Invoking strict mode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode#invoking_strict_mode
 'use strict';
+const selectSort = document.querySelector('#sort-select');
+
 
 /**
 Description of the available api
@@ -48,11 +50,14 @@ const setCurrentDeals = ({result, meta}) => {
  * @param  {Number}  [size=12] - size of the page
  * @return {Object}
  */
-const fetchDeals = async (page = 1, size = 6) => {
+const fetchDeals = async (page = 1, size = 6, sort = '') => {
   try {
-    const response = await fetch(
-      `https://lego-api-blue.vercel.app/deals?page=${page}&size=${size}`
-    );
+    let url = `https://lego-api-blue.vercel.app/deals?page=${page}&size=${size}`;
+    if (sort) {
+      url += `&sort=${sort}`;
+    }
+
+    const response = await fetch(url);
     const body = await response.json();
 
     if (body.success !== true) {
@@ -66,6 +71,7 @@ const fetchDeals = async (page = 1, size = 6) => {
     return {currentDeals, currentPagination};
   }
 };
+
 
 /**
  * Render list of deals
@@ -173,12 +179,15 @@ selectPage.addEventListener('change', async (event) => {
 });
 
 // Event listener for filtering by best discount FEATURE 2
-filterDiscount.addEventListener('change', async (event) => {
+selectSort.addEventListener('change', async (event) => {
+  const sort = event.target.value;
   const page = currentPagination.currentPage || 1;
   const size = parseInt(selectShow.value) || 6;
+  console.log("Sorting with:", sort);
 
-  const deals = await fetchDeals(page, size, event.target.checked ? 50 : null);
+  const deals = await fetchDeals(page, size, sort); // ✅ include sort
   setCurrentDeals(deals);
   render(currentDeals, currentPagination);
 });
+
 
