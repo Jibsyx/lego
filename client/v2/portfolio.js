@@ -272,6 +272,20 @@ const avg = prices.reduce((sum, p) => sum + p, 0) / prices.length || 0;
 document.querySelector('#p5Price').textContent = percentile(prices, 5).toFixed(2);
 document.querySelector('#p25Price').textContent = percentile(prices, 25).toFixed(2);
 document.querySelector('#p50Price').textContent = percentile(prices, 50).toFixed(2);
+// Feature 10: Lifetime Value (in days)
+if (sales.length > 0) {
+  const timestamps = sales.map(s => s.published).sort((a, b) => a - b);
+  const firstDate = new Date(timestamps[0] * 1000);
+  const lastDate = new Date(timestamps[timestamps.length - 1] * 1000);
+
+  const diffTime = Math.abs(lastDate - firstDate);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  document.querySelector('#lifetimeValue').textContent = `${diffDays} days`;
+} else {
+  document.querySelector('#lifetimeValue').textContent = '0 days';
+}
+
 
   if (sales.length === 0) {
     section.innerHTML += '<p>No sales found for this set.</p>';
