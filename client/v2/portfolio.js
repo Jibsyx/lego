@@ -249,11 +249,29 @@ selectSort.addEventListener('change', async (event) => {
 });
 const renderSales = (sales) => {
   document.querySelector('#nbSales').textContent = sales.length;
+  document.querySelector('#p5Price').textContent = 0;
+  document.querySelector('#p25Price').textContent = 0;
+  document.querySelector('#p50Price').textContent = 0;
 
   const section = document.querySelector('#sales');
   section.innerHTML = '<h2>Sales on Vinted</h2>';
   document.querySelector('#nbSales').textContent = sales.length;
 
+// Feature 9: Calculate and display price indicators
+const prices = sales.map(s => s.price).sort((a, b) => a - b);
+
+// Percentile helper
+const percentile = (arr, p) => {
+  if (arr.length === 0) return 0;
+  const index = Math.floor((p / 100) * arr.length);
+  return arr[Math.min(index, arr.length - 1)];
+};
+
+const avg = prices.reduce((sum, p) => sum + p, 0) / prices.length || 0;
+
+document.querySelector('#p5Price').textContent = percentile(prices, 5).toFixed(2);
+document.querySelector('#p25Price').textContent = percentile(prices, 25).toFixed(2);
+document.querySelector('#p50Price').textContent = percentile(prices, 50).toFixed(2);
 
   if (sales.length === 0) {
     section.innerHTML += '<p>No sales found for this set.</p>';
