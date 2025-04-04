@@ -183,10 +183,18 @@ selectSort.addEventListener('change', async (event) => {
   const sort = event.target.value;
   const page = currentPagination.currentPage || 1;
   const size = parseInt(selectShow.value) || 6;
-  console.log("Sorting with:", sort);
 
-  const deals = await fetchDeals(page, size, sort); // ✅ include sort
-  setCurrentDeals(deals);
+  const { result, meta } = await fetchDeals(page, size);
+
+  let sortedResult = result;
+
+  if (sort === 'discount-desc') {
+    sortedResult = [...result].sort((a, b) => (b.discount || 0) - (a.discount || 0));
+  } else if (sort === 'comments-desc') {
+    sortedResult = [...result].sort((a, b) => (b.comments || 0) - (a.comments || 0));
+  }
+
+  setCurrentDeals({ result: sortedResult, meta });
   render(currentDeals, currentPagination);
 });
 
