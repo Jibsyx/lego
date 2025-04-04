@@ -261,10 +261,16 @@ selectSort.addEventListener('change', async (event) => {
   else if (sort === 'date-asc') {
     // Newest first = highest published timestamp
     sortedResult = [...result].sort((a, b) => b.published - a.published);
-  } else if (sort === 'date-desc') {
+  } 
+  else if (sort === 'date-desc') {
     // Oldest first = lowest published timestamp
     sortedResult = [...result].sort((a, b) => a.published - b.published);
   }
+  else if (sort === 'favorites') {
+  const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+  sortedResult = [...result].filter(deal => favorites.includes(deal.uuid));
+  }
+
   
 
   setCurrentDeals({ result: sortedResult, meta });
