@@ -192,7 +192,7 @@ selectSort.addEventListener('change', async (event) => {
   const page = currentPagination.currentPage || 1;
   const size = parseInt(selectShow.value) || 6;
 
-  // Show only relevant input box
+  // Show threshold fields (if needed for other filters)
   boxDiscount.style.display = sort === 'discount-desc' ? 'block' : 'none';
   boxComments.style.display = sort === 'comments-desc' ? 'block' : 'none';
   boxTemperature.style.display = sort === 'temperature-desc' ? 'block' : 'none';
@@ -215,12 +215,16 @@ selectSort.addEventListener('change', async (event) => {
     sortedResult = [...result]
       .filter(deal => (deal.temperature || 0) >= minTemp)
       .sort((a, b) => b.temperature - a.temperature);
+  } else if (sort === 'price-asc') {
+    sortedResult = [...result].sort((a, b) => (a.price || 0) - (b.price || 0));
+  } else if (sort === 'price-desc') {
+    sortedResult = [...result].sort((a, b) => (b.price || 0) - (a.price || 0));
   }
-  
 
   setCurrentDeals({ result: sortedResult, meta });
   render(currentDeals, currentPagination);
 });
+
 [inputMinDiscount, inputMinComments, inputMinTemperature].forEach(input => {
   input.addEventListener('input', () => {
     const event = new Event('change');
