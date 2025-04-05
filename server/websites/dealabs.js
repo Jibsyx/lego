@@ -1,49 +1,54 @@
+const fetch = require('../fetchWrapper');
 const cheerio = require('cheerio');
 
-/**
- * Parse webpage data response
- * @param  {String} data - HTML response
- * @return {Array<Object>} deals
- */
 const parse = data => {
-  const $ = cheerio.load(data);
-  const deals = [];
-
-  $('div.js-vue2[data-vue2]').each((_, el) => {
-    try {
-      const vueData = $(el).attr('data-vue2');
-      if (!vueData) return;
-
-      const parsed = JSON.parse(vueData);
-      const thread = parsed.props?.thread;
-
-      if (thread) {
+    const $ = cheerio.load(data);
+    const deals = [];
+  
+    $('div.js-vue2[data-vue2]').each((_, el) => {
+      const vue2Data = $(el).attr('data-vue2');
+      if (!vue2Data) return;
+  
+      try {
+        const parsed = JSON.parse(vue2Data);
+        const thread = parsed.props?.thread;
+  
+        if (!thread) return;
+  
         const title = thread.title;
-        const link = thread.link || 'https://www.dealabs.com' + thread.titleSlug;
-        const price = thread.price + '€';
-        const discount = thread.percentage ? `-${thread.percentage}%` : '';
+        const link = thread.shareableLink;
+        const price = thread.price;
+        const originalPrice = thread.nextBestPrice;
+        const discount = (originalPrice && price)
+          ? Math.round(((originalPrice - price) / originalPrice) * 100) + '%'
+          : '';
         const temperature = Math.round(thread.temperature) + '°';
-        const comments = thread.commentCount;
+        const comments = thread.commentCount.toString();
+        const publishedAt = thread.publishedAt
+            ? new Date(thread.publishedAt * 1000).toISOString()
+            : '';
 
+  
         deals.push({
           title,
           link,
-          price,
+          price: price ? `${price}€` : '',
           discount,
           temperature,
-          comments
+          comments,
+          publishedAt
         });
+      } catch (err) {
+        console.error('JSON parse error:', err);
       }
-    } catch (err) {
-      console.error('Error parsing data-vue2:', err.message);
-    }
-  });
-
-  return deals;
-};
+    });
+  
+    return deals;
+  };
+  
 
 module.exports.scrape = async url => {
-  const response = await require('../fetchWrapper')(url);
+  const response = await fetch(url);
   if (response.ok) {
     const body = await response.text();
     return parse(body);
