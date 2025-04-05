@@ -1,6 +1,8 @@
 const websites = require('require-all')(`${__dirname}/websites`);
 const fs = require('fs');
 const path = require('path');
+const connectToDb = require('./db');
+require('dotenv').config();
 
 async function sandbox(website = 'https://www.avenuedelabrique.com/nouveautes-lego') {
   try {
@@ -17,12 +19,19 @@ async function sandbox(website = 'https://www.avenuedelabrique.com/nouveautes-le
     }
 
     const deals = await websites[domain].scrape(website);
+
     // Save deals to a JSON file
     const filename = `${domain}.deals.json`;
     const filePath = path.join(__dirname, 'data', filename);
-
     fs.writeFileSync(filePath, JSON.stringify(deals, null, 2), 'utf-8');
     console.log(`✅ Saved ${deals.length} deals to ${filePath}`);
+
+    // Add source info and insert into MongoDB
+    const db = await connectToDb();
+    const collection = db.collection('deals');
+    const dealsWithSource = deals.map(deal => ({ ...deal, source: domain, scrapedAt: new Date() }));
+    const insertResult = await collection.insertMany(dealsWithSource);
+    console.log(`✅ Inserted ${insertResult.insertedCount} deals from ${domain} to MongoDB`);
 
     console.log('done');
     process.exit(0);
