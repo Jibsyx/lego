@@ -8,7 +8,7 @@ require('dotenv').config();
     const allDeals = await scrapeAllLegoIds(); // <- récupérer les résultats
 
     // 💾 Sauvegarde dans un fichier vinted.deals.json
-    const filePath = path.join(__dirname, 'data', 'vinted.deals.json');
+    const filePath = path.join(__dirname, 'data', 'vinted.sales.json');
     fs.writeFileSync(filePath, JSON.stringify(allDeals, null, 2), 'utf-8');
     console.log(`✅ ${allDeals.length} deals sauvegardés dans ${filePath}`);
 
