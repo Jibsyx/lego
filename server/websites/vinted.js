@@ -2,7 +2,6 @@ const fs = require("fs");
 const path = require("path");
 const { v5: uuidv5 } = require("uuid");
 const fetch = require("node-fetch");
-require("dotenv").config();
 
 /**
  * Liste des ID LEGO à scraper
@@ -26,7 +25,7 @@ function readJsonFile(filename) {
 }
 
 /**
- * Scrape Vinted pour un ID LEGO donné (avec cookies avancés)
+ * Scrape Vinted pour un ID LEGO donné (avec cookies)
  */
 const scrapeWithCookies = async (legoId) => {
   try {
@@ -37,14 +36,9 @@ const scrapeWithCookies = async (legoId) => {
       headers: {
         "accept": "application/json, text/plain, */*",
         "accept-language": "fr",
-        "cache-control": "no-cache",
-        "pragma": "no-cache",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
-        "referer": `https://www.vinted.fr/catalog?search_text=${legoId}`,
-        "cookie": process.env.VINTED_COOKIE || "",
-        "x-anon-id": process.env.VINTED_ANON_ID || "",
-        "x-csrf-token": process.env.VINTED_CSRF || "",
-        "x-money-object": "true"
+        "cookie": process.env.VINTED_COOKIE || "", // Ajouté : support via .env
+        "referer": `https://www.vinted.fr/catalog?search_text=${legoId}`
       },
       method: "GET"
     });
@@ -120,13 +114,8 @@ const scrapeAllLegoIds = async () => {
 };
 
 
-if (require.main === module) {
-  scrapeAllLegoIds();
-}
-
 module.exports = {
-  scrapeWithCookies,
   scrapeAllLegoIds,
-  LEGO_IDS,
-  scrape: scrapeAllLegoIds
+  scrapeWithCookies,
+  LEGO_IDS
 };
