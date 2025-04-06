@@ -173,14 +173,21 @@ selectSort.addEventListener('change', async e => {
     filtered = filtered.filter(d => fav.includes(d._id));
   } else if (currentSort === 'discount-desc') {
     const min = parseInt(inputMinDiscount.value) || 0;
-    filtered = filtered.filter(d => (d.discount || 0) >= min).sort((a, b) => (b.discount || 0) - (a.discount || 0));
+    filtered = filtered
+      .filter(d => Number(d.discount) >= min)
+      .sort((a, b) => Number(b.discount) - Number(a.discount));
   } else if (currentSort === 'comments-desc') {
     const min = parseInt(inputMinComments.value) || 0;
-    filtered = filtered.filter(d => (d.comments || 0) >= min).sort((a, b) => (b.comments || 0) - (a.comments || 0));
+    filtered = filtered
+      .filter(d => Number(d.comments) >= min)
+      .sort((a, b) => Number(b.comments) - Number(a.comments));
   } else if (currentSort === 'temperature-desc') {
     const min = parseFloat(inputMinTemperature.value) || 0;
-    filtered = filtered.filter(d => (d.temperature || 0) >= min).sort((a, b) => b.temperature - a.temperature);
+    filtered = filtered
+      .filter(d => Number(d.temperature) >= min)
+      .sort((a, b) => Number(b.temperature) - Number(a.temperature));
   }
+  
 
   setCurrentDeals({ result: filtered, meta: data.meta });
   render(filtered, data.meta);
