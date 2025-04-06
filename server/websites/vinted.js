@@ -1,46 +1,117 @@
-const fetch = require('node-fetch');
+const fs = require("fs");
+const path = require("path");
+const { v5: uuidv5 } = require("uuid");
+const fetch = require("node-fetch");
 
 /**
- * Scrape Vinted for a given search query and return up to 30 results
- * @param {String} url - Full Vinted search page URL (with query param)
- * @returns {Array<Object>} - List of items
+ * Liste des ID LEGO à scraper
  */
-module.exports.scrape = async (url) => {
-  const headers = {
-    "cookie": "_vinted_fr_session=Z1NaMjcrcUJGazJMbEFGM3hrdVB1WmFRVjB2Y1d6QUw4MWo2RFZOVC9sYmc0SWhMZUpCVlRvTU5YMHRBeTRUdEpPQzYvZUhpNGEyTkZKNjY3OUkvYlczeWJKSFN3cGhDOUtxZlZ4SFZONW1oSU0rcCtUWGNycmtDM1FCeDZFWTQyYUxvRjY1dFhSVm9oWThwSjBJYi84cWQ4OEw3ZTJ4WTd6MGYwNi9YZCt5aFpaY09QTlpuSVIzemJ3YVFkMWZ3cm15OXROS2xsUVRCMHpBTG5MR0t3ekU1WTMzSHBJK2NIZGxnWk5VZ3A3eGZjNk9MN3BuRGhKaFpzcVBuaVZGWC0taXZjTmFnQWZVWDRSVzMzc1JFY3R6Zz09--f1c885ad6782babe844a2b7058bba8475937e98d; __cf_bm=zFIo6n9ke6F1AUYyzy8SEXYkLCbt.5gbcbrLGxs7Enc-1743866793-1.0.1.1-KiwoYAMMYoNp5l1yDeas2mQZCbwGUxOtUQDV7JtggKhBqzaDtIehi2WSyT8Guc8TqMRH.BxB3WOCC7zCm5rdHKyQzo6HszeDbj2VYh9p8wk", // ← ⚠️ tu dois mettre tes cookies ici
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
-    "accept": "application/json",
-    "accept-language": "fr-FR,fr;q=0.9"
-  };
+const LEGO_IDS = [
+  "42143", "75192", "10347", "31215", "21265", 
+  "10337", "76919","60337", "76294"
+];
 
+/**
+ * Lit un fichier JSON local
+ */
+function readJsonFile(filename) {
+  if (!fs.existsSync(filename)) return [];
   try {
-    // Transformation de l'URL utilisateur en appel API
-    const parsed = new URL(url);
-    const search = parsed.searchParams.get('search_text');
-    const page = parsed.searchParams.get('page') || '1';
+    return JSON.parse(fs.readFileSync(filename, "utf-8"));
+  } catch (error) {
+    console.error(`❌ Erreur de lecture du fichier ${filename} :`, error);
+    return [];
+  }
+}
 
-    const apiUrl = `https://www.vinted.fr/api/v2/catalog/items?search_text=${encodeURIComponent(search)}&per_page=30&page=${page}`;
+/**
+ * Scrape Vinted pour un ID LEGO donné (avec cookies)
+ */
+const scrapeWithCookies = async (legoId) => {
+  try {
+    console.log(`🔍 Scraping Vinted pour LEGO ID: ${legoId}`);
+    const url = `https://www.vinted.fr/api/v2/catalog/items?page=1&per_page=96&search_text=${legoId}`;
 
-    const res = await fetch(apiUrl, { headers });
-    if (!res.ok) {
-      console.error("Fetch error", res.status);
+    const response = await fetch(url, {
+      headers: {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "fr",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+        "cookie": process.env.VINTED_COOKIE || "", // Ajouté : support via .env
+        "referer": `https://www.vinted.fr/catalog?search_text=${legoId}`
+      },
+      method: "GET"
+    });
+
+    if (!response.ok) {
+      console.error(`❌ HTTP ${response.status} pour ${legoId}`);
       return [];
     }
 
-    const json = await res.json();
-    const items = json.items || [];
-
-    return items.map(item => ({
-      id: item.id,
-      title: item.title,
-      price: item.price,
-      brand: item.brand_title,
-      size: item.size_title,
-      url: `https://www.vinted.fr${item.url}`,
-      image: item.photos?.[0]?.url || ''
-    }));
-  } catch (err) {
-    console.error("Scraping error:", err);
+    const body = await response.json();
+    const items = parseJSON(body, legoId);
+    return items;
+  } catch (error) {
+    console.error(`❌ Erreur scraping ${legoId}:`, error.message);
     return [];
   }
+};
+
+/**
+ * Parse JSON de l'API Vinted
+ */
+const parseJSON = (data, legoId) => {
+  try {
+    return (data.items || [])
+      .filter(item => item.brand_title?.toLowerCase() === "lego")
+      .map(item => ({
+        id: legoId,
+        link: `https://www.vinted.fr${item.url}`,
+        price: item.total_item_price?.amount || null,
+        title: item.title,
+        brand: item.brand_title,
+        published: item.photo?.high_resolution?.timestamp
+          ? new Date(item.photo.high_resolution.timestamp * 1000).toISOString()
+          : null,
+        uuid: uuidv5(item.url, uuidv5.URL)
+      }));
+  } catch (error) {
+    console.error("❌ Parse error:", error);
+    return [];
+  }
+};
+
+/**
+ * Sauvegarde locale (optionnelle)
+ */
+const saveDeals = (deals) => {
+  const filename = path.join(__dirname, "DEALSVinted.json");
+  const existingDeals = readJsonFile(filename);
+  const combined = [...existingDeals, ...deals].reduce((acc, deal) => {
+    if (!acc.find(d => d.uuid === deal.uuid)) acc.push(deal);
+    return acc;
+  }, []);
+
+  fs.writeFileSync(filename, JSON.stringify(combined, null, 2), "utf-8");
+  console.log(`✅ ${deals.length} nouveaux deals ajoutés à ${filename}`);
+};
+
+/**
+ * Scrape tous les LEGO_IDs listés
+ */
+const scrape = async () => {
+  const allResults = [];
+  for (const legoId of LEGO_IDS) {
+    const results = await scrapeWithCookies(legoId);
+    allResults.push(...results);
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Attente pour éviter le blocage
+  }
+  return allResults;
+};
+
+module.exports = {
+  scrape,
+  scrapeAllLegoIds:scrape,
+  scrapeWithCookies,
+  LEGO_IDS
 };
