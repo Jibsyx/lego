@@ -148,3 +148,8 @@ app.get('/sales/search', async (req, res) => {
 });
 
 
+app.get('/debug-deals', async (req, res) => {
+  const db = await connectToDb();
+  const deals = await db.collection('deals').find().limit(5).toArray();
+  res.json(deals);
+});
