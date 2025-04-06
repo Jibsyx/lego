@@ -1,37 +1,52 @@
 const {
-    findBestDiscountDeals,
-    findMostCommentedDeals,
-    findDealsSortedByPrice,
-    findDealsSortedByDate,
-    findSalesByLegoId,
-    findRecentSales
-  } = require('./mongoQueries');
-  
-  (async () => {
-    console.log("🔍 Best Discount Deals:");
-    const bestDeals = await findBestDiscountDeals(20);
-    console.log(bestDeals);
-  
-    console.log("\n💬 Most Commented Deals:");
-    const commentedDeals = await findMostCommentedDeals(5);
-    console.log(commentedDeals);
-  
-    console.log("\n💸 Deals Sorted by Price:");
-    const sortedByPrice = await findDealsSortedByPrice();
-    console.log(sortedByPrice);
-  
-    console.log("\n🕓 Deals Sorted by Date:");
-    const sortedByDate = await findDealsSortedByDate();
-    console.log(sortedByDate);
-  
-    console.log("\n🧱 Sales for LEGO Set ID 75192:");
-    const sales = await findSalesByLegoId("75192");
-    console.log(sales);
-  
-    console.log("\n🆕 Sales scraped in the last 3 weeks:");
-    const recentSales = await findRecentSales();
-    console.log(recentSales);
-  
+  findBestDiscountDeals,
+  findMostCommentedDeals,
+  findDealsSortedByPrice,
+  findDealsSortedByDate,
+  findSalesByLegoId,
+  findRecentSales
+} = require('./mongoQueries');
+
+const connectToDb = require('./db');
+require('dotenv').config();
+
+const legoIdArg = process.argv[3] || '42143';
+
+(async () => {
+  const [, , queryName] = process.argv;
+
+  if (!queryName) {
+    console.error('❌ Please provide a valid query name:');
+    console.log('Options: bestDiscount, mostCommented, sortedByPrice, sortedByDate, salesById, recentSales');
+    process.exit(1);
+  }
+
+  try {
+    console.log(`🔍 Running query: ${queryName}`);
+    const db = await connectToDb();
+
+    const testMap = {
+      bestDiscount: () => findBestDiscountDeals(db),
+      mostCommented: () => findMostCommentedDeals(db),
+      sortedByPrice: () => findDealsSortedByPrice(db),
+      sortedByDate: () => findDealsSortedByDate(db),
+      salesById: () => findSalesByLegoId(db, legoIdArg),
+      recentSales: () => findRecentSales(db)
+    };
+
+    const queryFunc = testMap[queryName];
+
+    if (!queryFunc) {
+      console.error(`❌ Query "${queryName}" not found.`);
+      process.exit(1);
+    }
+
+    const results = await queryFunc();
+    console.log(`✅ ${results.length} result(s) found:`);
+    console.dir(results, { depth: null });
+  } catch (error) {
+    console.error('❌ Error while running query:', error);
+  } finally {
     process.exit(0);
-  })();
-  
+  }
+})();

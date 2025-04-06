@@ -1,63 +1,165 @@
-require('dotenv').config();
 const connectToDb = require('./db');
 
 /**
- * Find all best discount deals (e.g. more than 40%)
+ * 1. Find all best discount deals (deals with the highest discount percentage)
  */
-async function findBestDiscountDeals(minDiscount = 40) {
-  const db = await connectToDb();
-  return db.collection('deals').find({
-    discount: { $regex: /^-?\d+%$/, $exists: true }
-  }).toArray();
+async function findBestDiscountDeals(db) {
+  const deals = await db.collection('deals').aggregate([
+    {
+      $match: {
+        discount: { $regex: /^\d+%$/ } // On ne garde que les chaînes comme "33%"
+      }
+    },
+    {
+      $addFields: {
+        discountValue: {
+          $toInt: { $substr: ["$discount", 0, { $subtract: [{ $strLenCP: "$discount" }, 1] }] }
+        }
+      }
+    },
+    { $sort: { discountValue: -1 } },
+    { $limit: 10 }
+  ]).toArray();
+
+  return deals;
 }
 
-/**
- * Find all most commented deals (more than X comments)
- */
-async function findMostCommentedDeals(minComments = 10) {
-  const db = await connectToDb();
-  return db.collection('deals').find({
-    comments: { $gte: minComments }
-  }).toArray();
-}
+
 
 /**
- * Find all deals sorted by price (ascending)
+ * 2. Find all most commented deals
  */
-async function findDealsSortedByPrice() {
-  const db = await connectToDb();
-  return db.collection('deals').find().sort({ price: 1 }).toArray();
-}
+const findMostCommentedDeals = async (db) => {
+  const collection = db.collection('deals');
+  const deals = await collection.aggregate([
+    {
+      $addFields: {
+        commentsInt: {
+          $toInt: {
+            $cond: {
+              if: { $eq: ['$comments', ''] },
+              then: '0',
+              else: '$comments'
+            }
+          }
+        }
+      }
+    },
+    { $sort: { commentsInt: -1 } },
+    { $limit: 10 }
+  ]).toArray();
+
+  return deals;
+};
+
 
 /**
- * Find all deals sorted by date (most recent first)
+ * 3. Find all deals sorted by price
  */
-async function findDealsSortedByDate() {
-  const db = await connectToDb();
-  return db.collection('deals').find().sort({ date: -1 }).toArray();
-}
+const findDealsSortedByPrice = async (db) => {
+  const collection = db.collection('deals');
+  const deals = await collection.aggregate([
+    {
+      $match: {
+        price: { $regex: /^[0-9]+(\.[0-9]+)?€$/ } // garde uniquement les prix valides (ex: "134.99€")
+      }
+    },
+    {
+      $addFields: {
+        priceValue: {
+          $toDouble: {
+            $replaceAll: {
+              input: "$price",
+              find: "€",
+              replacement: ""
+            }
+          }
+        }
+      }
+    },
+    { $sort: { priceValue: -1 } },
+    { $limit: 10 }
+  ]).toArray();
+
+  return deals;
+};
+
+
 
 /**
- * Find all sales for a given Lego set ID
+ * 4. Find all deals sorted by date (scrapedAt or published date)
  */
-async function findSalesByLegoId(legoSetId) {
-  const db = await connectToDb();
-  return db.collection('sales').find({ legoSetId }).toArray();
-}
+const findDealsSortedByDate = async (db) => {
+  const collection = db.collection('deals');
+
+  const deals = await collection.aggregate([
+    {
+      $match: {
+        publishedAt: { $exists: true, $ne: "" }
+      }
+    },
+    {
+      $addFields: {
+        publishedDate: {
+          $toDate: "$publishedAt"
+        }
+      }
+    },
+    {
+      $sort: {
+        publishedDate: -1 // les plus récents d'abord
+      }
+    },
+    {
+      $limit: 10
+    }
+  ]).toArray();
+
+  return deals;
+};
+
+
 
 /**
- * Find all sales scraped less than 3 weeks ago
+ * 5. Find all sales for a given LEGO set ID
  */
-async function findRecentSales() {
-  const db = await connectToDb();
+const findSalesByLegoId = async (db, legoId) => {
+  return await db.collection('sales')
+    .find({ id: legoId })
+    .sort({ published: -1 })
+    .toArray();
+};
+
+
+/**
+ * 6. Find all sales scraped less than 3 weeks ago
+ */
+const findRecentSales = async (db) => {
   const threeWeeksAgo = new Date();
   threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
-  return db.collection('sales').find({
-    scrapedAt: { $gte: threeWeeksAgo }
-  }).toArray();
-}
 
-// Export all methods
+  return await db.collection('sales')
+    .aggregate([
+      {
+        $addFields: {
+          publishedDate: { $toDate: "$published" }
+        }
+      },
+      {
+        $match: {
+          publishedDate: { $gte: threeWeeksAgo }
+        }
+      },
+      {
+        $sort: { publishedDate: -1 }
+      }
+    ])
+    .toArray();
+};
+
+
+
+
 module.exports = {
   findBestDiscountDeals,
   findMostCommentedDeals,
