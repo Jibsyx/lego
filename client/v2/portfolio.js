@@ -1,7 +1,6 @@
 'use strict';
 
-// 🧱 Change ici l’URL de ton serveur si besoin
-const API_BASE = 'https://server-624255xj2-jean-bastien-morales-projects.vercel.app';
+const API_BASE = 'https://server-7m8webgn1-jean-bastien-morales-projects.vercel.app';
 
 const selectSort = document.querySelector('#sort-select');
 const inputMinDiscount = document.querySelector('#min-discount');
@@ -15,6 +14,7 @@ document.querySelector('#nbSales').textContent = 0;
 
 let currentDeals = [];
 let currentPagination = {};
+let currentSort = '';
 
 const selectShow = document.querySelector('#show-select');
 const selectPage = document.querySelector('#page-select');
@@ -22,10 +22,12 @@ const selectLegoSetIds = document.querySelector('#lego-set-id-select');
 const sectionDeals = document.querySelector('#deals');
 const spanNbDeals = document.querySelector('#nbDeals');
 
-// 👉 Utilise ta propre base
 const fetchDeals = async (page = 1, size = 6, sort = '') => {
   try {
-    const url = `${API_BASE}/deals/search?limit=${size}&page=${page}`;
+    const params = new URLSearchParams({ limit: size, page });
+    if (sort && sort !== 'favorites') params.append('filterBy', sort);
+
+    const url = `${API_BASE}/deals/search?${params.toString()}`;
     const response = await fetch(url);
     const data = await response.json();
 
@@ -45,18 +47,13 @@ const fetchDeals = async (page = 1, size = 6, sort = '') => {
     };
   } catch (error) {
     console.error('❌ Error in fetchDeals:', error);
-    return { result: [], meta: {} };
+    return { result: [], meta: { currentPage: 1, pageCount: 1, count: 0 } };
   }
 };
 
 const fetchSales = async (legoId) => {
   try {
-    // ❌ OLD
-    // const response = await fetch(`${API_BASE}/sales/search?id=${legoId}`);
-
-    // ✅ FIXED
     const response = await fetch(`${API_BASE}/sales/search?legoSetId=${legoId}`);
-
     const body = await response.json();
     return body.results || [];
   } catch (err) {
@@ -64,8 +61,6 @@ const fetchSales = async (legoId) => {
     return [];
   }
 };
-
-
 
 const setCurrentDeals = ({ result, meta }) => {
   currentDeals = result;
@@ -135,6 +130,10 @@ const renderIndicators = pagination => {
 };
 
 const render = (deals, pagination) => {
+  if (!Array.isArray(deals) || !pagination) {
+    console.warn("⚠️ Skipped render due to invalid data", deals, pagination);
+    return;
+  }
   renderDeals(deals);
   renderPagination(pagination);
   renderIndicators(pagination);
@@ -143,52 +142,48 @@ const render = (deals, pagination) => {
 
 selectShow.addEventListener('change', async e => {
   const size = parseInt(e.target.value);
-  const deals = await fetchDeals(1, size);
-  render(deals.result, deals.meta);
+  const data = await fetchDeals(1, size, currentSort);
+  setCurrentDeals(data);
+  render(data.result, data.meta);
 });
 
 selectPage.addEventListener('change', async e => {
   const page = parseInt(e.target.value);
   const size = parseInt(selectShow.value);
-  const deals = await fetchDeals(page, size);
-  render(deals.result, deals.meta);
+  const data = await fetchDeals(page, size, currentSort);
+  setCurrentDeals(data);
+  render(data.result, data.meta);
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const deals = await fetchDeals();
-  render(deals.result, deals.meta);
+  const data = await fetchDeals();
+  setCurrentDeals(data);
+  render(data.result, data.meta);
 });
 
 selectSort.addEventListener('change', async e => {
-  const sort = e.target.value;
-  const page = currentPagination.currentPage || 1;
+  currentSort = e.target.value;
   const size = parseInt(selectShow.value) || 6;
-  const { result, meta } = await fetchDeals(page, size, sort);
+  const data = await fetchDeals(1, size, currentSort);
 
-  let sortedResult = [...result];
+  let filtered = data.result;
 
-  if (sort === 'discount-desc') {
-    const min = parseInt(inputMinDiscount.value) || 0;
-    sortedResult = sortedResult.filter(d => (d.discount || 0) >= min)
-                               .sort((a, b) => (b.discount || 0) - (a.discount || 0));
-  } else if (sort === 'comments-desc') {
-    const min = parseInt(inputMinComments.value) || 0;
-    sortedResult = sortedResult.filter(d => (d.comments || 0) >= min)
-                               .sort((a, b) => (b.comments || 0) - (a.comments || 0));
-  } else if (sort === 'temperature-desc') {
-    const min = parseFloat(inputMinTemperature.value) || 0;
-    sortedResult = sortedResult.filter(d => (d.temperature || 0) >= min)
-                               .sort((a, b) => b.temperature - a.temperature);
-  } else if (sort === 'price-asc') {
-    sortedResult.sort((a, b) => (a.price || 0) - (b.price || 0));
-  } else if (sort === 'price-desc') {
-    sortedResult.sort((a, b) => (b.price || 0) - (a.price || 0));
-  } else if (sort === 'favorites') {
+  if (currentSort === 'favorites') {
     const fav = JSON.parse(localStorage.getItem('favorites') || '[]');
-    sortedResult = sortedResult.filter(d => fav.includes(d._id));
+    filtered = filtered.filter(d => fav.includes(d._id));
+  } else if (currentSort === 'discount-desc') {
+    const min = parseInt(inputMinDiscount.value) || 0;
+    filtered = filtered.filter(d => (d.discount || 0) >= min).sort((a, b) => (b.discount || 0) - (a.discount || 0));
+  } else if (currentSort === 'comments-desc') {
+    const min = parseInt(inputMinComments.value) || 0;
+    filtered = filtered.filter(d => (d.comments || 0) >= min).sort((a, b) => (b.comments || 0) - (a.comments || 0));
+  } else if (currentSort === 'temperature-desc') {
+    const min = parseFloat(inputMinTemperature.value) || 0;
+    filtered = filtered.filter(d => (d.temperature || 0) >= min).sort((a, b) => b.temperature - a.temperature);
   }
 
-  render(sortedResult, meta);
+  setCurrentDeals({ result: filtered, meta: data.meta });
+  render(filtered, data.meta);
 });
 
 [inputMinDiscount, inputMinComments, inputMinTemperature].forEach(input => {
@@ -202,6 +197,7 @@ selectLegoSetIds.addEventListener('change', async event => {
   const sales = await fetchSales(event.target.value);
   renderSales(sales);
 });
+
 const inputLegoId = document.querySelector('#lego-set-id-input');
 const btnSearchSales = document.querySelector('#search-sales-btn');
 
@@ -214,7 +210,6 @@ btnSearchSales.addEventListener('click', async () => {
   renderSales(sales);
 });
 
-
 const renderSales = sales => {
   document.querySelector('#nbSales').textContent = sales.length;
   document.querySelector('#p5Price').textContent = 0;
@@ -225,7 +220,8 @@ const renderSales = sales => {
   section.innerHTML = '<h2>Sales on Vinted</h2>';
 
   const prices = sales.map(s => parseFloat(s.price)).sort((a, b) => a - b);
-  const percentile = (arr, p) => arr.length === 0 ? 0 : arr[Math.min(Math.floor((p / 100) * arr.length), arr.length - 1)];
+  const percentile = (arr, p) =>
+    arr.length === 0 ? 0 : arr[Math.min(Math.floor((p / 100) * arr.length), arr.length - 1)];
 
   document.querySelector('#p5Price').textContent = percentile(prices, 5).toFixed(2);
   document.querySelector('#p25Price').textContent = percentile(prices, 25).toFixed(2);
@@ -239,28 +235,23 @@ const renderSales = sales => {
     document.querySelector('#lifetimeValue').textContent = '0 days';
   }
 
-  section.innerHTML += sales.map(s => `
+  section.innerHTML += sales
+    .map(
+      s => `
     <div class="sale">
       <span>${s.price} €</span>
       <span>Published: ${new Date(s.published).toLocaleDateString()}</span>
       <a href="${sanitizeUrl(s.link)}" target="_blank">View</a>
-
     </div>
-  `).join('');
+  `
+    )
+    .join('');
 };
+
 function sanitizeUrl(url) {
   if (!url) return '#';
-
-  // Garde uniquement ce qui commence à partir de "www.vinted.fr"
-  const match = url.match(/www\.vinted\.fr\/[^\s"]+/);
-  if (match) {
-    return `https://${match[0]}`;
-  }
-
-  // Si déjà bien formatée (ex: https://www.vinted.fr/...), on garde tel quel
+  const match = url.match(/www\.vinted\.fr\/[^\"]+/);
+  if (match) return `https://${match[0]}`;
   if (url.startsWith('https://')) return url;
-
-  return '#'; // sinon lien cassé
+  return '#';
 }
-
-
