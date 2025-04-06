@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { v5: uuidv5 } = require("uuid");
 const fetch = require("node-fetch");
+require("dotenv").config();
 
 /**
  * Liste des ID LEGO à scraper
@@ -25,7 +26,7 @@ function readJsonFile(filename) {
 }
 
 /**
- * Scrape Vinted pour un ID LEGO donné (avec cookies)
+ * Scrape Vinted pour un ID LEGO donné (avec cookies avancés)
  */
 const scrapeWithCookies = async (legoId) => {
   try {
@@ -36,9 +37,14 @@ const scrapeWithCookies = async (legoId) => {
       headers: {
         "accept": "application/json, text/plain, */*",
         "accept-language": "fr",
+        "cache-control": "no-cache",
+        "pragma": "no-cache",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
-        "cookie": process.env.VINTED_COOKIE || "", // Ajouté : support via .env
-        "referer": `https://www.vinted.fr/catalog?search_text=${legoId}`
+        "referer": `https://www.vinted.fr/catalog?search_text=${legoId}`,
+        "cookie": process.env.VINTED_COOKIE || "",
+        "x-anon-id": process.env.VINTED_ANON_ID || "",
+        "x-csrf-token": process.env.VINTED_CSRF || "",
+        "x-money-object": "true"
       },
       method: "GET"
     });
@@ -99,19 +105,28 @@ const saveDeals = (deals) => {
 /**
  * Scrape tous les LEGO_IDs listés
  */
-const scrape = async () => {
-  const allResults = [];
+const scrapeAllLegoIds = async () => {
+  console.log(`📦 Scraping ${LEGO_IDS.length} LEGO IDs sur Vinted...`);
+  const allDeals = [];
+
   for (const legoId of LEGO_IDS) {
-    const results = await scrapeWithCookies(legoId);
-    allResults.push(...results);
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Attente pour éviter le blocage
+    const deals = await scrapeWithCookies(legoId);
+    allDeals.push(...deals);
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // pause anti-bannissement
   }
-  return allResults;
+
+  console.log("🎉 Scraping terminé !");
+  return allDeals; // ✅ important !
 };
 
+
+if (require.main === module) {
+  scrapeAllLegoIds();
+}
+
 module.exports = {
-  scrape,
-  scrapeAllLegoIds:scrape,
   scrapeWithCookies,
-  LEGO_IDS
+  scrapeAllLegoIds,
+  LEGO_IDS,
+  scrape: scrapeAllLegoIds
 };
