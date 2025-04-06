@@ -32,3 +32,24 @@ app.get('/', (request, response) => {
 app.listen(PORT);
 
 console.log(`📡 Running on port ${PORT}`);
+
+const { ObjectId } = require('mongodb');
+
+app.get('/deals/:id', async (req, res) => {
+  const db = await connectToDb();
+  const { id } = req.params;
+
+  let deal;
+  try {
+    deal = await db.collection('deals').findOne({ _id: new ObjectId(id) });
+  } catch (err) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+
+  if (!deal) {
+    return res.status(404).json({ error: 'Deal not found' });
+  }
+
+  res.json(deal);
+});
+
